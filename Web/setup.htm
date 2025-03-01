@@ -1,0 +1,260 @@
+<html><head>
+<script language=javascript>
+var srv, dev, tm;
+function fl(s) {
+ var i, m = [];
+ document.getElementById("raw").innerHTML = "Page0: " + s;
+ for (i = 0; 32 > i; i++) m[i] = parseInt(s.substr(i*2, 2), 16);
+ i = [0,6,2,0,0,8,4,0,0,5,1,0,0,7,3,0];
+ i = i[(m[13] >> 2) & 15];
+ document.getElementById("a").value = m[0] + m[1] * 256 + (i ? 0 : (m[2] + m[3] * 256)) * 65536;
+ document.getElementById("b").value = m[4] + m[5] * 256 + (i ? 0 : (m[6] + m[7] * 256)) * 65536;
+ document.getElementById("sa").innerHTML = (m[17] & 128) ? "high" : "low";
+ document.getElementById("sb").innerHTML = (m[17] &  64) ? "high" : "low";
+ document.getElementById("ds").hidden = !i;
+ document.getElementById("mn").innerHTML = document.getElementById("ms")[i].innerText;
+ document.getElementById("min").innerHTML = m[2];
+ document.getElementById("max").innerHTML = m[3];
+ document.getElementById("sc").innerHTML = m[6] + m[7] * 256;
+ document.getElementById("ur").value = i ? "Reset" : "Update";
+ document.getElementById("ur").onclick = i ? rs : ud;
+ ss("ms", i);
+ document.getElementById("tla").value = m[8];
+ document.getElementById("tha").value = m[9];
+ document.getElementById("tlb").value = m[10];
+ document.getElementById("thb").value = m[11];
+ i = ((m[12] >> 6) & 2) | ((m[13] >> 7) & 1); ss("ea", i > 2 ? 2 : i);
+ i = ((m[12] >> 5) & 2) | ((m[13] >> 6) & 1); ss("eb", i > 2 ? 2 : i);
+ ss("wu", (m[13] & 3) ^ 3);
+ ss("pu", (m[12] & 3));
+ ss("pw", (m[12] >> 2) & 3);
+ document.getElementById("pua").checked = !(m[12] & 32);
+ document.getElementById("pub").checked = !(m[12] & 16);
+}
+function sv() {
+ var i, m = [], r = new XMLHttpRequest();
+ for (i = 0; 32 > i; i++) m.push(0);
+ i = [0,10,2,14,6,9,1,13,5];
+ m[13] |= (i[sg("ms")] & 15) << 2;
+ m[8]  = parseInt(document.getElementById("tla").value, 10);
+ m[9]  = parseInt(document.getElementById("tha").value, 10);
+ m[10] = parseInt(document.getElementById("tlb").value, 10);
+ m[11] = parseInt(document.getElementById("thb").value, 10);
+ i = sg("ea"); m[12] |= (i & 2) << 6; m[13] |= (i & 1) << 7;
+ i = sg("eb"); m[12] |= (i & 2) << 5; m[13] |= (i & 1) << 6;
+ m[13] |= (sg("wu") & 3) ^ 3;
+ m[12] |= (sg("pu") & 3);
+ m[12] |= (sg("pw") & 3) << 2;
+ if (!document.getElementById("pua").checked) m[12] |= 32;
+ if (!document.getElementById("pub").checked) m[12] |= 16;
+ r.onreadystatechange = function() {
+  if (this.readyState == 4) {
+   if (this.status == 200 && typeof this.response === "object" && typeof this.response[0] === "string")
+    fl(this.response[0]);
+   else if (!document.getElementById("rl").disabled)
+    rl(1);
+   document.getElementById("sv").disabled = false;
+  }
+ };
+ document.getElementById("sv").disabled = true;
+ r.responseType = "json";
+ r.open("GET", "http://"+srv+"/json/uncached/"+dev+"/pages/page.8?page.8="+hs(m,0,32), true);
+ r.send();
+}
+function ud() {
+ var i, m = [], r = new XMLHttpRequest();
+ for (i = 0; 32 > i; i++) m.push(0);
+ i = parseInt(document.getElementById("a").value, 10);
+ m[0] = i & 255;
+ m[1] = (i >> 8) & 255;
+ m[2] = (i >> 16) & 255;
+ m[3] = (i >> 24) & 255;
+ i = parseInt(document.getElementById("b").value, 10);
+ m[4] = i & 255;
+ m[5] = (i >> 8) & 255;
+ m[6] = (i >> 16) & 255;
+ m[7] = (i >> 24) & 255;
+ r.onreadystatechange = function() {
+  if (this.readyState == 4) {
+   if (this.status == 200 && typeof this.response === "object" && typeof this.response[0] === "string")
+    fl(this.response[0]);
+   else if (!document.getElementById("rl").disabled)
+    rl(1);
+   document.getElementById("ur").disabled = false;
+  }
+ };
+ document.getElementById("ur").disabled = true;
+ r.responseType = "json";
+ r.open("GET", "http://"+srv+"/json/uncached/"+dev+"/pages/page.0?page.0="+hs(m,0,32), true);
+ r.send();
+}
+function rs() {
+ var i, m = [], r = new XMLHttpRequest();
+ for (i = 0; 32 > i; i++) m.push(0);
+ i = parseInt(document.getElementById("a").value, 10);
+ m[0] = i & 255;
+ m[1] = (i >> 8) & 255;
+ m[2] = 255;
+ m[3] = 0;
+ i = parseInt(document.getElementById("b").value, 10);
+ m[4] = i & 255;
+ m[5] = (i >> 8) & 255;
+ m[6] = 0;
+ m[7] = 0;
+ r.onreadystatechange = function() {
+  if (this.readyState == 4) {
+   if (this.status == 200 && typeof this.response === "object" && typeof this.response[0] === "string")
+    fl(this.response[0]);
+   else if (!document.getElementById("rl").disabled)
+    rl(1);
+   document.getElementById("ur").disabled = false;
+  }
+ };
+ document.getElementById("ur").disabled = true;
+ r.responseType = "json";
+ r.open("GET", "http://"+srv+"/json/uncached/"+dev+"/pages/page.0?page.0="+hs(m,0,32), true);
+ r.send();
+}
+function rl(once) {
+ var r = new XMLHttpRequest();
+ r.onreadystatechange = dev ? function() {
+  if (this.readyState == 4) {
+   if (this.status == 200 && typeof this.response === "object" && typeof this.response[0] === "string")
+    fl(this.response[0]);
+   else
+    document.getElementById("raw").innerHTML = "<font color=red>Following data is not valid, " +
+     (this.status ? this.status == 404 ? "Device is offline" :
+      "Error "+this.status+" "+this.statusText : "Server read error, check owhttpd") + "</font>";
+   if (!once && document.getElementById("co").checked && !tm)
+    tm = setTimeout(rl, 250);
+   else
+    document.getElementById("rl").disabled = false;
+  }
+ } : function () {
+  if (this.readyState == 4) {
+   var i, h = "";
+   if (this.status == 200 && typeof this.response === "object")
+    for (i in this.response)
+     h += ((i.substr(0,3) == "1D.") ? "<a href=\"#"+srv+"/"+i+"\">"+i+"</a>" : i) + "<br>";
+   else
+    h = "<font color=red>" + (this.status ?
+      "Error "+this.status+" "+this.statusText : "Server read error, check owhttpd") + "</font>";
+   document.getElementById("ls").innerHTML = h;
+   if (!once && document.getElementById("co").checked && !tm)
+    tm = setTimeout(rl, 1000);
+   else
+    document.getElementById("rl").disabled = false;
+  }
+ };
+ if (!once) tm = null;
+ document.getElementById("rl").disabled = true;
+ r.responseType = "json";
+ r.open("GET", "http://"+srv+"/json/uncached/"+(dev?dev+"/pages/page.8":""), true);
+ r.send();
+}
+function cc() {
+ if (!document.getElementById("co").checked && tm) {
+  clearTimeout(tm);
+  document.getElementById("rl").disabled = false;
+ }
+}
+function ii() {
+ var a = location.hash.replace(/^#/,"").split("/");
+ srv = a[0]; dev = a[1];
+ document.getElementById("cf").hidden = !!srv;
+ document.getElementById("wr").hidden = !srv;
+ document.getElementById("hd").innerHTML = "<a href=\"#\">/</a> " +
+  (dev ? "<a href=\"#"+srv+"\">"+srv+"</a> / " + dev : srv);
+ document.getElementById("ls").hidden = !!dev;
+ document.getElementById("dv").hidden = !dev;
+ if (srv) rl();
+}
+function ok() {
+ location.hash = document.getElementById("srv").value;
+}
+function ss(n, i) {
+ var k, o = document.getElementById(n);
+ for (k = 0; o.length > k; k++) o[k].selected = (k == i);
+}
+function sg(n) {
+ var k, o = document.getElementById(n);
+ for (k = 0; o.length > k && !o[k].selected; k++);
+ return k >= o.length ? 0 : k;
+}
+function hx(i) {
+ return i>0?256>i?(16>i?"0":"")+i.toString(16):"ff":"00";
+}
+function hs(a,o,n) {
+ var s = "";
+ for (n += o; n > o; o++) s += hx(a[o]);
+ return s;
+}
+</script>
+</head><body onload="ii()" onhashchange="ii()">
+<div id="wr" hidden>
+<b id="hd"></b><br>
+<input id="rl" type=button value="Reload" onclick="rl()">
+<input id="co" type=checkbox onchange="cc()"> continuous<br>
+<div id="ls"></div>
+<div id="dv" hidden>
+<span id="raw"></span><br>
+Counter A: <input id="a" type=number size=10 min=0 max=4294967295 step=1><br>
+Counter B: <input id="b" type=number size=10 min=0 max=4294967295 step=1><br>
+Sens A: <span id="sa"></span>, Sens B: <span id="sb"></span><span id="ds" hidden>, Measures for <span id="mn"></span>: Min: <span id="min"></span>, Max: <span id="max"></span>, Samples: <span id="sc"></span></span><br>
+<input id="ur" type=button value="Update" onclick="ud()"><br>
+Measure: <select id="ms">
+<option selected>none
+<option>A low @ Ext pwr
+<option>A low @ Bat pwr
+<option>A high @ Ext pwr
+<option>A high @ Bat pwr
+<option>B low @ Ext pwr
+<option>B low @ Bat pwr
+<option>B high @ Ext pwr
+<option>B high @ Bat pwr
+</select><br>
+Threshold A falling: <input id="tla" type=number size=3 min=0 max=255 step=1> rising: <input id="tha" type=number size=3 min=0 max=255 step=1><br>
+Threshold B falling: <input id="tlb" type=number size=3 min=0 max=255 step=1> rising: <input id="thb" type=number size=3 min=0 max=255 step=1><br>
+Increment A on <select id="ea">
+<option selected>falling
+<option>rising
+<option>both
+</select> edge(s)<br>
+Increment B on <select id="eb">
+<option selected>falling
+<option>rising
+<option>both
+</select> edge(s)<br>
+Sampling period: <select id="wu">
+<option selected>150ms
+<option>75ms
+<option>38ms
+<option>19ms
+</select> <br>
+Pullup/poweron pulse duration: <select id="pu">
+<option selected>25us
+<option>50us
+<option>125us
+<option>425us
+</select> (at least)<br>
+Sensors power: <select id="pw">
+<option selected>off
+<option>pulse on
+<option>pulse on, swap B &amp; PWR
+<option>always on
+</select><br>
+<input id="pua" type=checkbox> pullup A<br>
+<input id="pub" type=checkbox> pullup B<br>
+<input id="sv" type=button value="Save" onclick="sv()">
+</div></div>
+<div id="cf">
+Input owhttpd_address:port <input id="srv" type=text value="127.0.0.1:2121" onkeydown="if(event.keyCode==13)ok()">
+<input type=button value="Ok" onclick="ok()"><br><br>
+If you have already configured and running <a href="https://owfs.org/">owserver</a>, run owhttpd in this way:
+<pre>$ owhttpd -p owhttpd_address:port -s owserver_address:port</pre>
+Or run owhttpd as standalone 1-wire bus master in this way:
+<pre>$ owhttpd -p owhttpd_address:port --passive /dev/ttyUSB0</pre>
+Read <a href="https://owfs.org/uploads/owhttpd.html">owhttpd</a> man page.<br><br>
+Read 1-wire Counter <a href="manual.htm">manual</a>.
+</div>
+</body></html>
